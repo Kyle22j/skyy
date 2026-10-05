@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Our Little Sky</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Playfair+Display:ital,wght@0,500;1,400&display=swap');
+
+        * {
+          margin: 0;  
+          padding: 0;
+          box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #050510;
+            overflow: hidden;
+            font-family: 'Cormorant Garamond', serif;
+            color: #f8f0ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        #star-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            cursor: crosshair;
+        }
+
+        .letter-container {
+            position: relative;
+            z-index: 10;
+            width: 92%;
+            max-width: 720px;
+            max-height: 78vh;
+            overflow-y: auto;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            pointer-events: none;
+            transition: opacity 1.8s ease, transform 1.8s ease;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 200, 180, 0.3) transparent;
+        }
+
+        .letter-container.fade-out {
+            opacity: 0;
+            transform: scale(0.96) translateY(-20px);
+            pointer-events: none;
+        }
+
+        .letter-container::-webkit-scrollbar {
+            width: 5px;
+        }
+        .letter-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 200, 180, 0.35);
+            border-radius: 10px;
+        }
+
+        #typed-text {
+            font-size: clamp(1.05rem, 2.8vw, 1.35rem);
+            line-height: 1.8;
+            letter-spacing: 0.015em;
+            min-height: 320px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            text-shadow: 0 2px 18px rgba(0, 0, 0, 0.7);
+            pointer-events: none;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1.15em;
+            background: #ffd4b8;
+            margin-left: 3px;
+            vertical-align: text-bottom;
+            animation: blink 0.75s infinite;
+        }
+
+        @keyframes blink {
+            0%, 45% { opacity: 1; }
+            55%, 100% { opacity: 0; }
+        }
+
+        #save-btn {
+            display: none;
+            margin: 2.5rem auto 0;
+            padding: 0.85rem 2.2rem;
+            background: rgba(255, 212, 168, 0.12);
+            border: 1px solid rgba(255, 210, 180, 0.45);
+            color: #ffe8d6;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.05rem;
+            letter-spacing: 0.08em;
+            border-radius: 999px;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: all 0.35s ease;
+        }
+
+        #save-btn, #mute-btn {
+            pointer-events: auto;
+            position: relative;
+            z-index: 20;
+        }
+
+        #save-btn:hover {
+            background: rgba(255, 212, 180, 0.25);
+            border-color: rgba(255, 212, 180, 0.75);
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(255, 200, 150, 0.25);
+        }
+
+        #mute-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 30;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 240, 230, 0.8);
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            font-size: 1.1rem;
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+            transition: all 0.3s ease;
+        }
+
+        #mute-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        #jonita-label {
+            position: fixed;
+            top: 38%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.8rem, 8vw, 4.5rem);
+            letter-spacing: 0.45em;
+            color: rgba(255, 230, 200, 0);
+            text-shadow: 0 0 40px rgba(255, 200, 150, 0.5);
+            pointer-events: none;
+            z-index: 8;
+            opacity: 0;
+            transition: color 2.8s ease, text-shadow 2.8s ease;
+        }
+
+        #jonita-label.show {
+            color: rgba(255, 235, 210, 0.95);
+            opacity: 1;
+            text-shadow: 
+               0 0 20px rgba(255, 210, 160, 0.7), 
+               0 0 50px rgba(255, 180, 140, 0.3),
+               0 0 90px rgba(255, 170, 120, 0.35);
+            letter-spacing: 0.5em;
+        }
+
+        #hidden-msg {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 10, 30, 0.7);
+            color: #ffe8d6;
+            padding: 12px 26px;
+            border-radius: 30px;
+            font-size: 1.05rem;
+            letter-spacing: 0.04em;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            pointer-events: none;
+            z-index: 25;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 200, 180, 0.25);
+        }
+
+        .hint {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            font-size: 0.85rem;
+            color: rgba(255, 220, 200, 0.45);
+            z-index: 20;
+            pointer-events: none;
+            transition: opacity 1.5s ease;
+        }
+
+        .hint.hide {
+            opacity: 0;
+        }
+
+        .fade-in {
+            animation: fadeIn 1.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+    </style>
+</head>
+<body>
+    <canvas id="star-canvas"></canvas>
+
+    <div id="jonita-label">JONITA</div>
+
+    <div class="letter-container" id="letter-box">
+        <div id="typed-text"></div>
+        <button id="save-btn">Save this sky + letter</button>
+    </div>
+
+    <button id="mute-btn" title="Mute / Unmute">🔊</button>
+    <div id="hidden-msg"></div>
+    <div class="hint">Click the sky to leave a star • Click the constellation for secrets</div>
+
+    <script>
+        //============= LETTER  ==============
+        const LETTER = `Hey you,
+
+I sat down to write something deep and poetic....
+
+then immediately typed "dear chaos gremlin" by accident and had to delete it three times.
+
+So here's the real version
+
+Thank you for being my favorite soft landing and my favorite disaster at the same time.
+The kind of person who makes ordinary Tuesdays feel like they belong to us.
+I came up with a weird name but ni sawa, something like "Jonita", IK IK, but do check it up for the meaning,kumbe we can have a good meaning.
+
+Whenever things get sharp or loud or too much, just do the lashing, at least that way I know you're expressing yourself rather than you trying to hide it
+and also think of this little private sky we're building righ now, just like I do -
+
+this one that only exists because you exist.
+
+I love you in the quiet ways and the completely unhinged ways, aaah ongoja I'll look for the meaning of that.
+
+But both at once, I guess no doubt.
+
+Always both.`;
+
+         const SEED = "Jonita32rdM";
+
+         const HIDDEN_MESSAGES = [
+            "You're the brightest star in my sky, even on the cloudiest days.",
+            "Everytime I look up, I'm reminded how lucky I am to have you as my constant.",
+            "You're the soft moonlight that makes my darkest nights feel gentle.",
+            "In the wide universe, you're my favorite constellation.",
+            "You're the quiet sunrise I never get tired of watching.",
+            "Even when everything feels stormy, you're my clear blue sky.",
+            "You're the shooting star I keep wishing on, and somehow you always stay.",
+            "My world is brighter because you chose to share the same sky with me.",
+            "You're the gentle twilight that makes everything feel safe and soft.",
+            "No matter how far the stars stretch, you'll always be my home in the sky."
+         ];
+
+         // ============= SEEDED RANDOM =============
+         function mulberry32(a) {
+            return function() {
+                let t = a += 0x6D2B79F5;
+                t = Math.imul(t ^ t >>> 15, t | 1);
+                t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+         }
+
+         function hashString(str) {
+            let h = 1779033703 ^ str.length;
+            for (let i = 0; i < str.length; i++) {
+                h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+                h = h << 13 | h >> 19;
+            }
+            return h >>> 0;
+         }
+
+         const rand = mulberry32(hashString(SEED));
+
+         // ========== TYING SOUND ===========
+         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+         let muted = false;
+         let ambientNodes = [];
+
+
+         function playTypeSound() {
+            if (muted || audioCtx.state === 'suspended') return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.value = 580 + Math.random() * 420;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.06);
+         }
+
+         function startAmbient() {
+            if (muted) return;
+            // soft low drone
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.value = 52;
+            gain1.gain.value = 0.045;
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+            osc1.start();
+            ambientNodes.push(osc1, gain1);
+
+            //soft noise
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.value = 104;
+            gain2.gain.value = 0.028;
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            osc2.start();
+            ambientNodes.push(osc2, gain2);
+         
+
+         // soft high sparkle tone
+         const osc3 = audioCtx.createOscillator();
+         const gain3 = audioCtx.createGain();
+         osc3.type = 'sine';
+         osc3.frequency.value = 208;
+         gain3.gain.value = 0.012;
+         osc3.connect(gain3);
+         gain3.connect(audioCtx.destination);
+         osc3.start();
+         ambientNodes.push(osc3, gain3);
+        }
+
+         function stopAmbient() {
+            ambientNodes.forEach(n => {
+                try { n.stop?.(); n.disconnect?.(); } catch(e) {}
+            });
+            ambientNodes = [];
+         }
+
+         document.getElementById('mute-btn').addEventListener('click', () => {
+            muted = !muted;
+            document.getElementById('mute-btn').textContent = muted ? '🔇' : '🔊';
+            if (muted) stopAmbient();
+            else {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                startAmbient();
+            }
+         });
+
+
+         // ============= CANVAS & STRINGS =============
+         const canvas = document.getElementById('star-canvas');
+         const ctx = canvas.getContext('2d');
+         let width, height;
+         let stars = [];
+         let userStars = JSON.parse(localStorage.getItem('ourSkyUserStars') || '[]');
+         let constellationPoints = [];
+         let linesDrawn = 0;
+         let constellationReady = false;
+         let morphing = false;
+         let finalStage = false;
+         let shootingStars = [];
+         let hearts = [];
+         let hovered = false;
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Background twinkling stars
+        for (let i = 0; i < 340; i++) {
+          stars.push({
+            x: rand() * width,
+            y: rand() * height,
+            r: rand() * 1.9 + 0.5,
+            baseAlpha: rand() * 0.7 + 0.3,
+            twinkleSpeed: rand() * 0.06 + 0.02,
+            phase: rand() * Math.PI * 2
+          });
+        }
+
+    
+
+        // Constellation points (seeded, nice shape)
+        function createConstellation() {
+            const cx = width * 0.5;
+            const cy = height * 0.38;
+            const scale = Math.min(width, height) * 0.15;
+
+            // Soft heart-ish / abstract romantic shape
+            const base = [
+                { x: 0, y: -0.85},
+                { x: 0.52, y: -0.52 },
+                { x: 0.88, y: 0.0 },
+                { x: 0.55, y: 0.48 },
+                { x: 0, y: 0.98 },
+                { x: -0.55, y: 0.48 },
+                { x: -0.88, y: 0 },
+                { x: -0.52, y: -0.52 },
+                // extra conneting stars
+                { x: 0.3, y: -0.12 },
+                { x: -0.3, y: -0.12 },
+                { x: 0.22, y: 0.38 },
+                { x: -0.22, y: 0.38 }
+            ];
+
+            constellationPoints = base.map((p, idx) => ({
+                x: cx + p.x * scale,
+                y: cy + p.y * scale,
+                tx: cx + p.x * scale,
+                ty: cy + p.y * scale,
+                r: 3.4 + rand() * 1.4,
+                alpha: 0,
+                msg: HIDDEN_MESSAGES[idx % HIDDEN_MESSAGES.length]
+            }));
+        }
+        createConstellation();
+
+        // target positions jonita
+        function setJonitaTargets() {
+            const cx = width * 0.5;
+            const cy = height * 0.42;
+            const spread = Math.min(width, height) * 0.26;
+
+            // more horizontal elegant arrangement
+            const targets = [
+                {x:-0.9,y:-0.3},{x:-0.6,y:-0.55},{x:-0.25,y:-0.4},
+                {x:0.1,y:-0.6},{x:0.4,y:-0.35},{x:0.7,y:-0.5},
+                {x:0.95,y:-0.25},{x:-0.75,y:0.2},{x:-0.35,y:0.35},
+                {x:0.05,y:0.25},{x:0.45,y:0.4},{x:0.8,y:0.2}
+            ];
+
+            constellationPoints.forEach((p, i) => {
+              p.tx = cx + targets[i].x * spread;
+              p.ty = cy + targets[i].y * spread;  
+              p.r = 4.2 + rand() * 1.6;
+            });
+        }
+
+        // Connection order for the lines ( romantic closed shape)
+        const connections = [
+           [0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,0],
+           [0,10],[4,11],[10,2],[11,2],[10,7],[11,7]
+        ];
+
+        // shooting star
+        function spawnShootingStar() {
+            if (Math.random() > 0.015) return;
+            shootingStars.push({
+                x: rand() * width,
+                y: rand() * height * 0.4,
+                len: 60 + rand() * 90,
+                speed: 6 + rand() * 5,
+                angle: Math.PI / 4 + rand() * 0.3,
+                alpha: 1
+            });
+        }
+
+        // Hearts
+        function spawnHearts() {
+            for (let i = 0; i < 14; i++) {
+                hearts.push({
+                    x: width * 0.5 + (rand() - 0.5) * 260,
+                    y: height * 0.75,
+                    vy: -1.4 - rand() * 1.8,
+                    vx: (rand() -0.5) * 1.5,
+                    r: 5 + rand() * 6,
+                    alpha: 0.9,
+                    life: 1
+                });
+            }
+        }
+        
+        function draw() {
+            // deep night sky gradient matching the photo
+            const sky = ctx.createLinearGradient(0, 0, 0, height);
+            sky.addColorStop(0, '#05051a');
+            sky.addColorStop(0.25, '#0f0a2e');
+            sky.addColorStop(0.45, '#2a1050');
+            sky.addColorStop(0.65, '#6b2a6e');
+            sky.addColorStop(0.8, '#c45a6a');
+            sky.addColorStop(0.92, '#e8906a');
+            sky.addColorStop(1, '#f5c49a');
+            ctx.fillStyle = sky;
+            ctx.fillRect(0, 0, width, height);
+        
+
+            // soft peacy glow at bottom
+            const band = ctx.createRadialGradient(width*0.55, height*0.35, 0, width*0.5, height*0.4, height*0.55);
+            band.addColorStop(0, 'rgba(180, 140, 255, 0.18)');
+            band.addColorStop(0.5, 'rgba(255,160,200,0.08)');
+            band.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = band;
+            ctx.fillRect(0, 0, width, height);
+
+            // Twinkling stars
+            const time = Date.now() * 0.001;
+            stars.forEach(s => {
+                const alpha = s.baseAlpha + Math.sin(time * s.twinkleSpeed * 30 + s.phase) * 0.35;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 245, 235, ${Math.max(0.2, Math.min(1, alpha))})`;
+                ctx.fill();
+            });
+
+            // user stars (persistent)
+            userStars.forEach(s => {
+                ctx.beginPath();
+                ctx.arc(s.x * width, s.y * height, s.r, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 230, 200, 0.95)';
+                ctx.shadowBlur = 14;
+                ctx.shadowColor = 'rgba(255, 200, 150, 0.8)';
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // shooting stars
+            spawnShootingStar();
+            shootingStars.forEach((s, i) => {
+                s.x += Math.cos(s.angle) * s.speed;
+                s.y += Math.sin(s.angle) * s.speed;
+                s.alpha -= 0.011;
+                ctx.beginPath();
+                ctx.moveTo(s.x, s.y);
+                ctx.lineTo(s.x - Math.cos(s.angle) * s.len, s.y - Math.sin(s.angle) * s.len);
+                ctx.strokeStyle = `rgba(255, 240, 220, ${s.alpha})`;
+                ctx.lineWidth = 2.2;
+                ctx.stroke();
+                if (s.alpha <= 0) shootingStars.splice(i, 1);
+            });
+
+            // hearts
+            hearts.forEach((h, i) => {
+                h.x += h.vx;
+                h.y += h.vy;
+                h.life -= 0.008;
+                h.alpha = h.life;
+                ctx.beginPath();
+                ctx.arc(h.x, h.y, h.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 180, 180, ${h.alpha})`;
+                ctx.fill();
+                if (h.life <= 0) hearts.splice(i, 1);
+            });
+
+            // constellation stars
+            constellationPoints.forEach(p => {
+                if (constellationReady && p.alpha < 0.98) p.alpha += 0.04;
+
+                // Morph toward Jonita positions
+                if (morphing) {
+                    p.x += (p.tx - p.x) * 0.025;
+                    p.y += (p.ty - p.y) * 0.025;
+                }
+
+                // subtle hover magic
+                const glow = hovered ? 32 : (finalStage ? 26 : 18);
+                const size = hovered ? p.r * 1.25 : p.r;
+
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 230, 200, ${p.alpha})`;
+                ctx.shadowBlur = glow;
+                ctx.shadowColor = 'rgba(255, 200, 150, 0.95)';
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // draw constellation lines progressively
+            if (constellationReady) {
+                ctx.strokeStyle = hovered ? 'rgba(255, 230, 190, 0.9)' : 'rgba(255, 220, 180, 0.7)';
+                ctx.lineWidth = hovered ? 2 : 1.7;
+                ctx.lineCap = 'round';
+
+                for (let i = 0; i < Math.min(linesDrawn, connections.length); i++) {
+                    const [a, b] = connections[i];
+                    ctx.beginPath();
+                    ctx.moveTo(constellationPoints[a].x, constellationPoints[a].y);
+                    ctx.lineTo(constellationPoints[b].x, constellationPoints[b].y);
+                    ctx.stroke();
+                }
+
+                if (linesDrawn < connections.length) {
+                    linesDrawn += 0.1; // slow draw speed
+                }
+            }
+
+            requestAnimationFrame(draw);
+        }
+        draw();
+
+        // ==== INTERACTION ==== 
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / width;
+            const y = (e.clientY - rect.top) / height;
+
+            // check ifclicked near a constellation
+            let clickedConstellation = false;
+            constellationPoints.forEach(p => {
+                const dx = e.clientX - p.x;
+                const dy = e.clientY - p.y;
+                if (Math.sqrt(dx*dx + dy*dy) < 22) {
+                    showMessage(p.msg);
+                    clickedConstellation = true;
+            }
+        });
+
+        if (!clickedConstellation) {
+            // add user star
+            userStars.push({ x, y, r: 2.5 + Math.random() * 2 });
+            localStorage.setItem('ourSkyUserStars', JSON.stringify(userStars));
+        }
+      });
+
+       canvas.addEventListener('mousemove', (e) => {
+          let over = false;
+          constellationPoints.forEach(p => {
+            const dx = e.clientX - p.x;
+            const dy = e.clientY - p.y;
+            if (Math.sqrt(dx*dx + dy*dy) < 45) over = true;
+          });
+          hovered = over && constellationReady;
+       });
+
+       function showMessage(msg) {
+           const el = document.getElementById('hidden-msg');
+           el.textContent = msg;
+           el.style.opacity = 1;
+           setTimeout(() => el.style.opacity = 0, 3200);
+       }
+
+        // ============= TYPING =============
+        const typedEl = document.getElementById('typed-text');
+        const letterBox = document.getElementById('letter-box');
+        const saveBtn = document.getElementById('save-btn');
+        let i = 0;
+        let finished = false;
+
+        function typeNext() {
+            if (i < LETTER.length) {
+                typedEl.textContent = LETTER.substring(0, i + 1);
+
+                // play soft typing sound on most characters
+                if (LETTER[i] !== ' ' && LETTER[i] !== '\n') {
+                    playTypeSound();
+                }
+
+                // auto-scroll so the lattest text stays visible
+                letterBox.scrollTop = letterBox.scrollHeight;
+
+                i++;
+
+                // natural rythm + tiny drmatic pauses
+                let delay = 28 + Math.random() * 22;
+                if (LETTER[i - 1] === '\n') delay = 280;
+                if ('.!,?'.includes(LETTER[i - 1])) delay = 160;
+
+                // start revealng constellation near the end
+                if (i > LETTER.length * 0.48) constellationReady = true;
+            
+
+                setTimeout(typeNext, delay);
+            } else {
+                typedEl.innerHTML = LETTER + '<span class="cursor"></span>';
+                letterBox.scrollTop = letterBox.scrollHeight;
+
+                setTimeout(() => {
+                    letterBox.classList.add('fade-out');
+                    document.getElementById('hint').classList.add('hide');
+
+                setTimeout(() => {
+                    finalStage = true;
+                    morphing = true;
+                    setJonitaTargets();
+
+                    const jonita = document.getElementById('jonita-label');
+                    jonita.classList.add('show');
+                
+                    spawnHearts();
+
+                setTimeout(() => {
+                    saveBtn.style.display = 'inline-block';
+                    saveBtn.classList.add('fade-in');
+                }, 1800);
+             }, 1600);
+           }, 900);
+         }     
+     }
+
+          // start after a soft breath
+          setTimeout(() => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            startAmbient();
+            typeNext();
+          }, 900);
+
+          // ============= SAVE =============
+          saveBtn.addEventListener('click', () => {
+            // create a clean export canvas
+            const exportCanvas = document.createElement('canvas');
+            const expW = 1000;
+            const expH = 1500;
+            exportCanvas.width = expW;
+            exportCanvas.height = expH;
+            const ectx = exportCanvas.getContext('2d');
+
+            // peachy dusk background
+            const sky = ectx.createLinearGradient(0, 0, 0, expH);
+            sky.addColorStop(0, '#05051a');
+            sky.addColorStop(0.25, '#0f0a2e');
+            sky.addColorStop(0.45, '#2a1050');
+            sky.addColorStop(0.65, '#f5d0a9');
+            sky.addColorStop(0.8, '#c45a6a')
+            sky.addColorStop(0.92, '#e8906a');
+            sky.addColorStop(1, '#f5c49a');
+            ectx.fillStyle = sky;
+            ectx.fillRect(0, 0, expW, expH);
+
+            // stars
+            for (let s = 0; s < 280; s++) {
+                ectx.beginPath();
+                ectx.arc(rand()*expW, rand()*expH*0.82, rand()*1.7+0.4, 0, Math.PI*2);
+                ectx.fillStyle = `rgba(255,245,235,${0.35+rand()*0.55})`;
+                ectx.fill();
+            }
+
+            // user stars
+            userStars.forEach(s => {
+                ectx.beginPath();
+                ectx.arc(s.x*expW, s.y*expH*0.7, s.r*1.2, 0, Math.PI*2);
+                ectx.fillStyle = 'rgba(255,230,200,0.95)';
+                ectx.fill();
+            });
+
+            // current letter text
+            ectx.fillStyle = 'rgba(255,245,240,0.95)';
+            ectx.font = '400 20px "Cormorant Garamond", serif';
+            ectx.textAlign = 'center';
+            ectx.textBaseline = 'top';
+
+            const lines = LETTER.split('\n');
+            let textY = expH * 0.48;
+            const lineHeight = 30;
+
+            lines.forEach(line => {
+                const words = line.split(' ');
+                let currentLine = '';
+                words.forEach(word => {
+                  const test = currentLine + word + ' ';
+                  if (ectx.measureText(test).width > expW - 90) { 
+                    ectx.fillText(currentLine.trim(), expW/2, textY);
+                    textY += lineHeight;
+                    currentLine = word + ' ';
+                  } else currentLine = test;
+            });
+
+            ectx.fillText(currentLine.trim(), expW/2, textY);
+            textY += lineHeight;
+        });
+
+        ectx.font = 'italic 20px "Cormorant Garamond", serif';
+        ectx.fillStyle = 'rgba(255,230,210,0.9)';
+        ectx.fillText('Jonita  ·  23rdM', expW/2, expH - 45);
+
+        const link = document.createElement('a');
+        link.download = 'our-sky-and-letter.png';
+        link.href = exportCanvas.toDataURL('image/png');
+        link.click();
+
+     });
+
+     </script>
+</body>
+</html>
+ 
